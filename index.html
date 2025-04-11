@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Showroom Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<style>
+    body { font-family: 'Poppins', sans-serif; }
+    .loading { display: none; }
+    .loading.active { display: flex; }
+</style>
+<body class="bg-gray-100">
+    <!-- Loading Animation -->
+    <div class="loading fixed inset-0 bg-black bg-opacity-50 z-50 justify-center items-center">
+        <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-blue-600 text-white p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Car Showroom Manager</h1>
+                <div class="space-x-4">
+                    <button onclick="showSection('employees')" class="hover:bg-blue-700 px-4 py-2 rounded">Employees</button>
+                    <button onclick="showSection('cars')" class="hover:bg-blue-700 px-4 py-2 rounded">Cars</button>
+                    <button onclick="showSection('fuel')" class="hover:bg-blue-700 px-4 py-2 rounded">Fuel Management</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mx-auto p-4">
+            <!-- Employees Section -->
+            <div id="employees" class="section">
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Employee Management</h2>
+                    <form id="employeeForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="empName" placeholder="Employee Name" class="border p-2 rounded" required>
+                        <select id="empType" class="border p-2 rounded" required>
+                            <option value="">Select Employee Type</option>
+                            <option value="sales">Sales Executive</option>
+                            <option value="mechanic">Mechanic</option>
+                            <option value="manager">Manager</option>
+                        </select>
+                        <input type="email" id="empEmail" placeholder="Email" class="border p-2 rounded" required>
+                        <input type="tel" id="empPhone" placeholder="Phone" class="border p-2 rounded" required>
+                        <button type="submit" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Employee</button>
+                    </form>
+                </div>
+                <div id="employeeList" class="bg-white rounded-lg shadow p-6"></div>
+            </div>
+
+            <!-- Cars Section -->
+            <div id="cars" class="section hidden">
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Car Management</h2>
+                    <form id="carForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="carModel" placeholder="Car Model" class="border p-2 rounded" required>
+                        <input type="text" id="carBrand" placeholder="Brand" class="border p-2 rounded" required>
+                        <input type="number" id="carPrice" placeholder="Price" class="border p-2 rounded" required>
+                        <input type="text" id="carColor" placeholder="Color" class="border p-2 rounded" required>
+                        <button type="submit" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Car</button>
+                    </form>
+                </div>
+                <div id="carList" class="bg-white rounded-lg shadow p-6"></div>
+            </div>
+
+            <!-- Fuel Management Section -->
+            <div id="fuel" class="section hidden">
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Fuel Management</h2>
+                    <form id="fuelForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <select id="fuelCar" class="border p-2 rounded" required>
+                            <option value="">Select Car</option>
+                        </select>
+                        <input type="number" id="fuelAmount" placeholder="Fuel Amount (L)" class="border p-2 rounded" required>
+                        <input type="date" id="fuelDate" class="border p-2 rounded" required>
+                        <button type="submit" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Fuel Record</button>
+                    </form>
+                </div>
+                <div id="fuelList" class="bg-white rounded-lg shadow p-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize MongoDB app slug
+        const appSlug = 'car-showroom-' + Math.random().toString(36).substr(2, 9);
+        const userId = localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', userId);
+
+        // Show/Hide sections
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => section.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // Loading animation
+        function toggleLoading(show) {
+            document.querySelector('.loading').classList.toggle('active', show);
+        }
+
+        // Database operations
+        async function dbOperation(action, collection, data = null, conditions = null) {
+            toggleLoading(true);
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action,
+                        collection,
+                        data,
+                        conditions
+                    })
+                });
+                const result = await response.json();
+                return result;
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Employee Management
+        document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const employee = {
+                name: document.getElementById('empName').value,
+                type: document.getElementById('empType').value,
+                email: document.getElementById('empEmail').value,
+                phone: document.getElementById('empPhone').value
+            };
+            await dbOperation('create', 'employees', employee);
+            e.target.reset();
+            loadEmployees();
+        });
+
+        async function loadEmployees() {
+            const result = await dbOperation('read', 'employees');
+            const employeeList = document.getElementById('employeeList');
+            employeeList.innerHTML = '<h3 class="text-xl font-bold mb-4">Employee List</h3>';
+            if (result.result.read.length > 0) {
+                const list = document.createElement('div');
+                list.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                result.result.read.forEach(emp => {
+                    list.innerHTML += `
+                        <div class="border p-4 rounded">
+                            <h4 class="font-bold">${emp.name}</h4>
+                            <p>Type: ${emp.type}</p>
+                            <p>Email: ${emp.email}</p>
+                            <p>Phone: ${emp.phone}</p>
+                            <button onclick="deleteEmployee('${emp._id}')" class="text-red-600 mt-2">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                });
+                employeeList.appendChild(list);
+            }
+        }
+
+        async function deleteEmployee(id) {
+            await dbOperation('delete', 'employees', null, { _id: id });
+            loadEmployees();
+        }
+
+        // Car Management
+        document.getElementById('carForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const car = {
+                model: document.getElementById('carModel').value,
+                brand: document.getElementById('carBrand').value,
+                price: document.getElementById('carPrice').value,
+                color: document.getElementById('carColor').value
+            };
+            await dbOperation('create', 'cars', car);
+            e.target.reset();
+            loadCars();
+            updateCarSelect();
+        });
+
+        async function loadCars() {
+            const result = await dbOperation('read', 'cars');
+            const carList = document.getElementById('carList');
+            carList.innerHTML = '<h3 class="text-xl font-bold mb-4">Car List</h3>';
+            if (result.result.read.length > 0) {
+                const list = document.createElement('div');
+                list.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                result.result.read.forEach(car => {
+                    list.innerHTML += `
+                        <div class="border p-4 rounded">
+                            <h4 class="font-bold">${car.brand} ${car.model}</h4>
+                            <p>Color: ${car.color}</p>
+                            <p>Price: $${car.price}</p>
+                            <button onclick="deleteCar('${car._id}')" class="text-red-600 mt-2">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                });
+                carList.appendChild(list);
+            }
+        }
+
+        async function deleteCar(id) {
+            await dbOperation('delete', 'cars', null, { _id: id });
+            loadCars();
+            updateCarSelect();
+        }
+
+        // Fuel Management
+        async function updateCarSelect() {
+            const result = await dbOperation('read', 'cars');
+            const select = document.getElementById('fuelCar');
+            select.innerHTML = '<option value="">Select Car</option>';
+            result.result.read.forEach(car => {
+                select.innerHTML += `<option value="${car._id}">${car.brand} ${car.model}</option>`;
+            });
+        }
+
+        document.getElementById('fuelForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fuel = {
+                carId: document.getElementById('fuelCar').value,
+                amount: document.getElementById('fuelAmount').value,
+                date: document.getElementById('fuelDate').value
+            };
+            await dbOperation('create', 'fuel', fuel);
+            e.target.reset();
+            loadFuelRecords();
+        });
+
+        async function loadFuelRecords() {
+            const result = await dbOperation('read', 'fuel');
+            const fuelList = document.getElementById('fuelList');
+            fuelList.innerHTML = '<h3 class="text-xl font-bold mb-4">Fuel Records</h3>';
+            if (result.result.read.length > 0) {
+                const list = document.createElement('div');
+                list.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                result.result.read.forEach(fuel => {
+                    list.innerHTML += `
+                        <div class="border p-4 rounded">
+                            <h4 class="font-bold">Fuel Record</h4>
+                            <p>Amount: ${fuel.amount}L</p>
+                            <p>Date: ${new Date(fuel.date).toLocaleDateString()}</p>
+                            <button onclick="deleteFuelRecord('${fuel._id}')" class="text-red-600 mt-2">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                });
+                fuelList.appendChild(list);
+            }
+        }
+
+        async function deleteFuelRecord(id) {
+            await dbOperation('delete', 'fuel', null, { _id: id });
+            loadFuelRecords();
+        }
+
+        // Initial load
+        loadEmployees();
+        loadCars();
+        loadFuelRecords();
+        updateCarSelect();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
